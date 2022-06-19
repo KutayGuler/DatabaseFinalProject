@@ -1,0 +1,24 @@
+{
+  "name": "socket",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "server": "nodemon server.js",
+    "dev": "vite --port 8080",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.30",
+    "svelte": "^3.44.0",
+    "vite": "^2.9.9",
+    "nodemon": "^2.0.16"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.5.1",
+    "express": "^4.18.1",
+    "msnodesqlv8": "^2.4.8",
+    "mssql": "^8.1.2"
+  }
+}
