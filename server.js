@@ -5,7 +5,7 @@ import sql from "mssql/msnodesqlv8.js";
 
 const io = new Server({
   cors: {
-    origin: "http://localhost:8080",
+    origin: "http://localhost:8000",
   },
 });
 
