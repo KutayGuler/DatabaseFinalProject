@@ -3,13 +3,12 @@
   // TODO: (TEST) perform minus result to other table
   // TODO: (TEST) insert data to table
   // TODO: (TEST) delete and alter tables
+  // TODO: (TEST) perform selection result to other table
+  // TODO: (TEST) perform projection result to other table
+  // TODO: (TEST) perform cross product result to other table
 
   // TODO: implement temporary table concept (check pdf)
-
   // TODO: create 2 or more tables with desired attributes and tuples
-  // TODO: perform selection result to other table
-  // TODO: perform projection result to other table
-  // TODO: perform cross product result to other table
 
   // @ts-nocheck
   import io from "socket.io-client";
@@ -17,6 +16,7 @@
   const socket = io("http://localhost:3000");
   const types = ["int", "varchar(255)"];
   const alterTypes = ["ADD", "DROP COLUMN", "ALTER COLUMN"];
+  const saves = ["INSERT INTO", "CREATE TABLE"];
   let currentDatabase = "Products";
 
   let result = "";
@@ -31,6 +31,9 @@
   let _alterColumn = "";
   let _values = "";
   let queryColumns = "*";
+  let saveResult = false;
+  let resultTable = "";
+  let _result = saves[0];
 
   socket.on("queryResult", (data) => {
     result = JSON.stringify(data);
@@ -47,6 +50,9 @@
       console.log(query);
       return;
       socket.emit("query", query);
+      if (saveResult) {
+        socket.emit(`${_result} ${resultTable} ${query}`);
+      }
     }
     socket.emit("query", `SELECT ${queryColumns} FROM [${tableName}]; `);
     [queryColumns, tableName] = ["*", ""];
@@ -188,6 +194,18 @@
       <button on:click={dropDatabase}>DROP DATABASE</button>
     </div>
     <h1>Result</h1>
+    <label for="">Save Result to Table</label>
+    <input style="width: 2vw;" type="checkbox" bind:checked={saveResult} />
+    {#if saveResult}
+      <select bind:value={_result}>
+        {#each saves as save}
+          <option value={save}>
+            {save}
+          </option>
+        {/each}
+      </select>
+      <input type="text" placeholder="Table Name" bind:value={resultTable} />
+    {/if}
     <p>{result}</p>
   </div>
 </main>
