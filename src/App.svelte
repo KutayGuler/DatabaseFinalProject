@@ -1,14 +1,8 @@
 <script>
-  // TODO: (TEST) perform union result to other table
-  // TODO: (TEST) perform minus result to other table
-  // TODO: (TEST) insert data to table
-  // TODO: (TEST) delete and alter tables
-  // TODO: (TEST) perform selection result to other table
-  // TODO: (TEST) perform projection result to other table
-  // TODO: (TEST) perform cross product result to other table
-
-  // TODO: implement temporary table concept (check pdf)
-  // TODO: create 2 or more tables with desired attributes and tuples
+  // test: Temporary table (#)
+  // test: truncate
+  // test: delete
+  // TODO: Cross join
 
   // @ts-nocheck
   import io from "socket.io-client";
@@ -20,6 +14,7 @@
   let currentDatabase = "Products";
 
   let result = "";
+  let rowsAffected = "";
   let db = "";
   let table = {};
   let tableName = "";
@@ -35,8 +30,12 @@
   let resultTable = "";
   let _result = saves[0];
 
+  let cross = false;
+  let crossTable = "";
+
   socket.on("queryResult", (data) => {
-    result = JSON.stringify(data);
+    result = JSON.stringify(data?.recordset);
+    rowsAffected = JSON.stringify(data?.rowsAffected);
   });
 
   function sendQuery() {
@@ -48,19 +47,28 @@
       );
       query = query.slice(0, query.length - 7);
       console.log(query);
-      return;
       socket.emit("query", query);
       if (saveResult) {
         socket.emit(`${_result} ${resultTable} ${query}`);
       }
     }
-    socket.emit("query", `SELECT ${queryColumns} FROM [${tableName}]; `);
-    [queryColumns, tableName] = ["*", ""];
+    if (cross) {
+      socket.emit(
+        "query",
+        `SELECT ${queryColumns} FROM ${tableNames[0]} CROSS JOIN ${crossTable};`
+      );
+    } else {
+      socket.emit("query", `SELECT ${queryColumns} FROM ${tableNames[0]};`);
+    }
+    [queryColumns, tableNames[0]] = ["*", ""];
   }
 
   function createDatabase() {
     if (db == "") return;
+    console.log("create");
     socket.emit("query", `CREATE DATABASE ${db}`);
+    console.log(`CREATE DATABASE ${db}`);
+    // TODO: Fix
     db = "";
   }
 
@@ -78,9 +86,22 @@
     [tableName, table] = ["", {}];
   }
 
+  let condition = "";
+
+  function deleteRow() {
+    if (table == "") return;
+    socket.emit("query", `DELETE FROM ${tableName} WHERE ${condition};`);
+  }
+
   function dropTable() {
     if (table == "") return;
     socket.emit("query", `DROP TABLE ${tableName};`);
+    tableName = "";
+  }
+
+  function truncateTable() {
+    if (table == "") return;
+    socket.emit("query", `TRUNCATE TABLE ${tableName};`);
     tableName = "";
   }
 
@@ -106,9 +127,12 @@
     tableNames = [...tableNames, ""];
   }
 
+  function crossJoin() {
+    cross = true;
+  }
+
   function alterTable() {
     console.log(`ALTER TABLE ${tableName}\n${_alter} ${_alterColumn};`);
-    return;
     socket.emit(
       "query",
       `ALTER TABLE ${tableName}\n${_alter} ${_alterColumn};`
@@ -120,13 +144,22 @@
   <div>
     <p><b>Current Database: </b>{currentDatabase}</p>
     <p>
-      {#each tableNames as table, i}
+      {#each tableNames as _, i}
         {#if i != 0}<p><strong>{queryMerge}</strong></p>{/if}
         SELECT <input type="text" bind:value={queryColumns} /> FROM
-        <input type="text" placeholder="Table name" bind:value={table} />
+        <input
+          type="text"
+          placeholder="Table name"
+          bind:value={tableNames[i]}
+        />
       {/each}
+      {#if cross}
+        <p>CROSS JOIN</p>
+        <input type="text" bind:value={crossTable} />
+      {/if}
       <button on:click={() => addTable("UNION")}>UNION</button>
-      <button on:click={() => addTable("MINUS")}>MINUS</button>
+      <button on:click={() => addTable("EXCEPT")}>EXCEPT</button>
+      <button on:click={crossJoin}>CROSS JOIN</button>
       <button on:click={sendQuery}>EXECUTE</button>
     </p>
 
@@ -174,14 +207,24 @@
         </select>
         <input
           type="text"
-          placeholder="Column name"
+          placeholder="Column_name datatype"
           bind:value={_alterColumn}
         />
         <button on:click={alterTable}>ALTER TABLE</button>
       </div>
       <div class="input-group">
         <input type="text" placeholder="Table name" bind:value={tableName} />
+        WHERE
+        <input type="text" placeholder="condition" bind:value={condition} />
+        <button on:click={deleteRow}>DELETE ROW</button>
+      </div>
+      <div class="input-group">
+        <input type="text" placeholder="Table name" bind:value={tableName} />
         <button on:click={dropTable}>DROP TABLE</button>
+      </div>
+      <div class="input-group">
+        <input type="text" placeholder="Table name" bind:value={tableName} />
+        <button on:click={truncateTable}>TRUNCATE TABLE</button>
       </div>
     </div>
 
@@ -206,6 +249,7 @@
       </select>
       <input type="text" placeholder="Table Name" bind:value={resultTable} />
     {/if}
+    <p>Rows Affected: {rowsAffected}</p>
     <p>{result}</p>
   </div>
 </main>
@@ -216,6 +260,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding-bottom: 20vh;
   }
 
   main > div {

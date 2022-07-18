@@ -14,6 +14,7 @@ const socket = client("http://localhost:3000");
 
 io.on("connection", (socket) => {
   socket.on("query", async (query) => {
+    console.log(query);
     var result = await executeQuery(query);
     socket.emit("queryResult", result);
   });
